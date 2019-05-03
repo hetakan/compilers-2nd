@@ -5,13 +5,13 @@ pub type NFA<'a> = Graph<'a>;
 pub struct Node {
     v: i32
 }
+
 impl Node {
-    pub fn spawn(n: usize, nodes: &mut Vec<Node>) {
-        for i in 0..n {
-            nodes.push(Node { v: i as i32 } );
-        }
+    pub fn spawn(n: i32) -> Vec<Node> {
+        (0..n).fold(vec![], |mut acc, i| { acc.push(Node{v: i}); acc })
     }
 }
+
 impl PartialEq for Node {
     fn eq(&self, other: &Node) -> bool {
         self.v == other.v
@@ -72,8 +72,7 @@ impl<'a> Graph<'a> {
 
 #[test]
 fn epsilon_nearest_closure_test() {
-    let mut states = vec![];
-    Node::spawn(2, &mut states);
+    let mut states = Node::spawn(2);
     let edges = vec![Edge{head: &states[0], tail: &states[1], epsilon: true, label: String::from("epsilon")}];
     let g = Graph::make(&states, &edges);
     let iter = g.epsilon_nearest_closure(&Node{v: 0});
@@ -82,8 +81,7 @@ fn epsilon_nearest_closure_test() {
 
 #[test]
 fn epsilon_nearest_closure_nothing_test() {
-    let mut states = vec![];
-    Node::spawn(2, &mut states);
+    let mut states = Node::spawn(2);
     let edges = vec![Edge{head: &states[0], tail: &states[1], epsilon: false, label: String::from("epsilon")}];
     let g = Graph::make(&states, &edges);
     let iter = g.epsilon_nearest_closure(&Node{v: 0});
@@ -92,18 +90,19 @@ fn epsilon_nearest_closure_nothing_test() {
 
 #[test]
 fn graph_make_test() {
-    let mut states = vec![];
-    Node::spawn(1, &mut states);
+    let mut states = Node::spawn(1);
     let edges = vec![Edge{head: &states[0], tail: &states[0], epsilon: false, label: String::from("a")}];
     assert!(Graph::make(&states, &edges).edges.len() == 1);
 }
 
 #[test]
 fn spawn_nodes_test() {
-    let mut nodes = vec![];
-    Node::spawn(1, &mut nodes);
-    assert!(nodes.len() == 1);
+    let n = 2;
+    Node::spawn(n)
+        .iter()
+        .for_each(|node| assert_eq!(*node, Node{v: node.v}));
 }
+
 #[test]
 fn node_equality() {
     // eq

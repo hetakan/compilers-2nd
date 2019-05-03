@@ -2,9 +2,8 @@ mod automaton;
 use crate::automaton::*;
 
 fn main() {
-    let mut states: Vec<Node> = vec![];
     let mut edges: Vec<Edge> = vec![];
-    State::spawn(4, &mut states);
+    let mut states = State::spawn(4);
 
     // (a|b)*abb
     Edge::spawn_loop(&states[0], "a", &mut edges);
