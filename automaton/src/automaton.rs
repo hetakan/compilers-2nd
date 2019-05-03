@@ -1,7 +1,7 @@
 pub type State = Node;
 pub type NFA<'a> = Graph<'a>;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Node {
     v: i32
 }
@@ -19,28 +19,33 @@ impl PartialEq for Node {
 }
 
 #[derive(Debug)]
-pub struct Edge<'a> {
-    head: &'a Node,
-    tail: &'a Node,
+pub struct Edge {
+    head: Node,
+    tail: Node,
     label: String,
     epsilon: bool,
 }
-impl<'a> Edge<'a> {
-    fn spawn_inner(node1: &'a State, node2: &'a State, name: &str, epsilon: bool, edges: &mut Vec<Edge<'a>>) {
-        edges.push(Edge{ head: node1, tail: node2, label: String::from(name), epsilon: epsilon});
-    }
-    pub fn spawn(node1: &'a State, node2: &'a State, name: &str, edges: &mut Vec<Edge<'a>>) {
-        if node1.v > node2.v {
-            Edge::spawn_inner(node2, node1, name, false, edges);
-        } else {
-            Edge::spawn_inner(node1, node2, name, false, edges);
+impl Edge {
+    fn spawn_inner(s1: State, s2: State, name: &str, epsilon: bool) -> Edge {
+        Edge {
+            head: s1,
+            tail: s2,
+            label: String::from(name),
+            epsilon: epsilon,
         }
     }
-    pub fn spawn_loop(node: &'a Node, name: &str, edges: &mut Vec<Edge<'a>>) {
-        Edge::spawn_inner(node, node, name, false, edges);
+    pub fn spawn(s1: State, s2: State, name: &str) -> Edge {
+        if s1.v > s2.v {
+            Edge::spawn_inner(s2, s1, name, false)
+        } else {
+            Edge::spawn_inner(s1, s2, name, false)
+        }
+    }
+    pub fn spawn_loop(s: State, name: &str) -> Edge {
+        Edge::spawn_inner(s, s, name, false)
     } 
-    pub fn spawn_epsilon(node1: &'a State, node2: &'a State, edges: &mut Vec<Edge<'a>>) {
-        Edge::spawn_inner(node1, node2, "epsilon", true, edges);
+    pub fn spawn_epsilon(s1: State, s2: State) -> Edge {
+        Edge::spawn_inner(s1, s2, "epsilon", true)
     }
     pub fn is_epsilon(&self) -> bool {
         self.epsilon
@@ -52,19 +57,19 @@ impl<'a> Edge<'a> {
 
 #[derive(Debug)]
 pub struct Graph<'a> {
-    states: &'a Vec<Node>,
-    edges: &'a Vec<Edge<'a>>,
+    states: &'a Vec<State>,
+    edges: &'a Vec<Edge>,
 }
 impl<'a> Graph<'a> {
-    pub fn make(states: &'a Vec<State>, edges: &'a Vec<Edge<'a>>) -> Graph<'a> {
+    pub fn make(states: &'a Vec<State>, edges: &'a Vec<Edge>) -> Graph<'a> {
         Graph {
             states: states, edges: edges,
         }
     }
-    pub fn epsilon_nearest_closure(&self, s: &State) -> Vec<&State> {
+    pub fn epsilon_nearest_closure(&self, s: State) -> Vec<State> {
         self.edges
-            .into_iter()
-            .filter(|&edge| edge.is_epsilon() && *s == *edge.head)
+            .iter()
+            .filter(|&edge| edge.is_epsilon() && s == edge.head)
             .map(|edge| edge.tail)
             .collect()
     }
@@ -72,26 +77,26 @@ impl<'a> Graph<'a> {
 
 #[test]
 fn epsilon_nearest_closure_test() {
-    let mut states = Node::spawn(2);
-    let edges = vec![Edge{head: &states[0], tail: &states[1], epsilon: true, label: String::from("epsilon")}];
+    let states = Node::spawn(2);
+    let edges = vec![Edge{head: states[0], tail: states[1], epsilon: true, label: String::from("epsilon")}];
     let g = Graph::make(&states, &edges);
-    let iter = g.epsilon_nearest_closure(&Node{v: 0});
-    assert_eq!(*iter[0], Node{v: 1});
+    let iter = g.epsilon_nearest_closure(Node{v: 0});
+    assert_eq!(iter[0], Node{v: 1});
 }
 
 #[test]
 fn epsilon_nearest_closure_nothing_test() {
-    let mut states = Node::spawn(2);
-    let edges = vec![Edge{head: &states[0], tail: &states[1], epsilon: false, label: String::from("epsilon")}];
+    let states = Node::spawn(2);
+    let edges = vec![Edge{head: states[0], tail: states[1], epsilon: false, label: String::from("epsilon")}];
     let g = Graph::make(&states, &edges);
-    let iter = g.epsilon_nearest_closure(&Node{v: 0});
+    let iter = g.epsilon_nearest_closure(Node{v: 0});
     assert!(iter.is_empty());
 }
 
 #[test]
 fn graph_make_test() {
-    let mut states = Node::spawn(1);
-    let edges = vec![Edge{head: &states[0], tail: &states[0], epsilon: false, label: String::from("a")}];
+    let states = Node::spawn(1);
+    let edges = vec![Edge{head: states[0], tail: states[0], epsilon: false, label: String::from("a")}];
     assert!(Graph::make(&states, &edges).edges.len() == 1);
 }
 
@@ -114,7 +119,7 @@ fn node_equality() {
 #[test]
 fn edge_is_loop() {
     let n = Node {v: 0};
-    let edge = Edge{ head: &n, tail: &n, epsilon: false, label: String::from("loop") };
+    let edge = Edge{ head: n, tail: n, epsilon: false, label: String::from("loop") };
     assert!(edge.is_loop());
 }
 
@@ -122,29 +127,27 @@ fn edge_is_loop() {
 fn edge_is_not_loop() {
     let n = Node {v: 0};
     let n2 = Node {v: 1};
-    let edge = Edge{ head: &n, tail: &n2, epsilon: false, label: String::from("no loop") };
+    let edge = Edge{ head: n, tail: n2, epsilon: false, label: String::from("no loop") };
     assert!(!edge.is_loop());
 }
 #[test]
 fn spawn_loop_test() {
     let node = Node { v: 0 };
-    let mut edges = vec![];
-    Edge::spawn_loop(&node, "hoge", &mut edges);
-    assert!(edges.len() == 1);
+    let edge = Edge::spawn_loop(node, "hoge");
+
+    assert!(edge.head == Node{v:0} && edge.tail == Node{v:0});
 }
 #[test]
 fn edge_spawn_test() {
-    let node1 = Node { v: 0 };
-    let node2 = Node { v: 1 };
-    let mut edges = vec![];
-    Edge::spawn(&node1, &node2, "fuga", &mut edges);
-    assert!(edges.len() == 1);
+    let n1 = Node { v: 0 };
+    let n2 = Node { v: 1 };
+    let edge = Edge::spawn(n1, n2, "fuga");
+    assert!(edge.head == n1 && edge.tail == n2);
 }
 #[test]
 fn edge_spawn_sort_test() {
-    let node1 = Node { v: 1 };
-    let node2 = Node { v: 0 };
-    let mut edges = vec![];
-    Edge::spawn(&node1, &node2, "fuga", &mut edges);
-    assert!(edges[0].head.v == 0 && edges[0].tail.v == 1);
+    let n1 = Node { v: 1 };
+    let n2 = Node { v: 0 };
+    let edge = Edge::spawn(n1, n2, "fuga");
+    assert!(edge.head == n2 && edge.tail == n1);
 }
