@@ -79,13 +79,22 @@ impl<'a> Graph<'a> {
             .map(|edge| edge.tail)
             .collect()
     }
-    //pub fn epsilon_closure(&self, states: &Vec<State>) -> Vec<State> {
-    //    let mut stack = states;
-    //    let mut closure = states;
-    //    while !stack.is_empty() {
-    //        let t = stack.pop();
-    //    }
-    //}
+    pub fn epsilon_closure(&self, states: &Vec<State>) -> Vec<State> {
+        let mut stack = states.clone();
+        let mut closure = states.clone();
+        while !stack.is_empty() {
+            let t = stack.pop().unwrap();
+            self.move_states(&vec![t], "epsilon")
+                .iter()
+                .for_each(|u|
+                    if !closure.contains(u) {
+                        closure.push(u.clone());
+                        stack.push(u.clone());
+                    }
+                )
+        }
+        closure
+    }
 }
 #[test]
 fn move_states_test() {
@@ -103,30 +112,34 @@ fn move_states_test() {
     assert!(ret.contains(&states[2]));
     assert!(ret.contains(&states[4]));
 }
-//#[test]
-//fn epsilon_closure_test() {
-//    // NFA of (a|b)*abb (compilers-2nd P.166, fig. 3.34)
-//    let states = Node::spawn(11);
-//    let edges = vec![
-//        Edge{head: states[0], tail: states[1], epsilon: true, label: "epsilon"},
-//        Edge{head: states[0], tail: states[7], epsilon: true, label: "epsilon"},
-//        Edge{head: states[1], tail: states[2], epsilon: true, label: "epsilon"},
-//        Edge{head: states[2], tail: states[3], epsilon: false, label: "a"},
-//        Edge{head: states[3], tail: states[6], epsilon: true, label: "epsilon"},
-//        Edge{head: states[1], tail: states[4], epsilon: true, label: "epsilon"},
-//        Edge{head: states[4], tail: states[5], epsilon: false, label: "b"},
-//        Edge{head: states[5], tail: states[6], epsilon: true, label: "epsilon"},
-//        Edge{head: states[6], tail: states[1], epsilon: true, label: "epsilon"},
-//        Edge{head: states[6], tail: states[7], epsilon: true, label: "epsilon"},
-//        Edge{head: states[7], tail: states[8], epsilon: false, label: "a"},
-//        Edge{head: states[8], tail: states[9], epsilon: false, label: "b"},
-//        Edge{head: states[9], tail: states[10], epsilon: false, label: "b"},
-//    ];
-//    let g = Graph::make(&states, &edges);
-//    let ret = g.epsilon_closure(&vec![Node{v:0}]);
-//    println!("{:#?}", ret);
-//    assert_eq!(ret.len(), 5);
-//}
+#[test]
+fn epsilon_closure_test() {
+    // NFA of (a|b)*abb (compilers-2nd P.166, fig. 3.34)
+    let states = Node::spawn(11);
+    let edges = vec![
+        Edge{head: states[0], tail: states[1], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[0], tail: states[7], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[1], tail: states[2], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[2], tail: states[3], epsilon: false, label: "a".to_string()},
+        Edge{head: states[3], tail: states[6], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[1], tail: states[4], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[4], tail: states[5], epsilon: false, label: "b".to_string()},
+        Edge{head: states[5], tail: states[6], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[6], tail: states[1], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[6], tail: states[7], epsilon: true, label: "epsilon".to_string()},
+        Edge{head: states[7], tail: states[8], epsilon: false, label: "a".to_string()},
+        Edge{head: states[8], tail: states[9], epsilon: false, label: "b".to_string()},
+        Edge{head: states[9], tail: states[10], epsilon: false, label: "b".to_string()},
+    ];
+    let g = Graph::make(&states, &edges);
+    let ret = g.epsilon_closure(&vec![Node{v:0}]);
+    assert_eq!(ret.len(), 5);
+    assert!(ret.contains(&State{v: 0}));
+    assert!(ret.contains(&State{v: 1}));
+    assert!(ret.contains(&State{v: 2}));
+    assert!(ret.contains(&State{v: 4}));
+    assert!(ret.contains(&State{v: 7}));
+}
 
 #[test]
 fn epsilon_nearest_closure_test() {
