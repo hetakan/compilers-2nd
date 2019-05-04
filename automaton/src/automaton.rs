@@ -62,6 +62,16 @@ impl<'a> Graph<'a> {
     pub fn make(states: &'a Vec<State>, edges: &'a Vec<Edge>) -> Graph<'a> {
         Self { states: states, edges: edges }
     }
+    pub fn move_states(&self, states: &Vec<State>, a: &str) -> Vec<State> {
+        states.iter().fold(vec![], |mut acc, &s| {
+            self.edges
+                .iter()
+                .filter(|&e| e.label == a && e.head == s)
+                .map(|e| e.tail)
+                .for_each(|node| acc.push(node));
+            acc
+        })
+    }
     pub fn epsilon_nearest_closure(&self, s: State) -> Vec<State> {
         self.edges
             .iter()
@@ -69,7 +79,54 @@ impl<'a> Graph<'a> {
             .map(|edge| edge.tail)
             .collect()
     }
+    //pub fn epsilon_closure(&self, states: &Vec<State>) -> Vec<State> {
+    //    let mut stack = states;
+    //    let mut closure = states;
+    //    while !stack.is_empty() {
+    //        let t = stack.pop();
+    //    }
+    //}
 }
+#[test]
+fn move_states_test() {
+    let states = Node::spawn(5);
+    let edges = vec![
+        Edge{head: states[0], tail: states[1], epsilon:false, label: "a".to_string()},
+        Edge{head: states[1], tail: states[2], epsilon:false, label: "a".to_string()},
+        Edge{head: states[1], tail: states[4], epsilon:false, label: "a".to_string()},
+        Edge{head: states[2], tail: states[3], epsilon:false, label: "b".to_string()},
+        Edge{head: states[3], tail: states[4], epsilon:false, label: "a".to_string()},
+    ];
+    let g = Graph::make(&states, &edges);
+    let ret = g.move_states(&vec![states[1]], "a");
+    assert_eq!(ret.len(), 2);
+    assert!(ret.contains(&states[2]));
+    assert!(ret.contains(&states[4]));
+}
+//#[test]
+//fn epsilon_closure_test() {
+//    // NFA of (a|b)*abb (compilers-2nd P.166, fig. 3.34)
+//    let states = Node::spawn(11);
+//    let edges = vec![
+//        Edge{head: states[0], tail: states[1], epsilon: true, label: "epsilon"},
+//        Edge{head: states[0], tail: states[7], epsilon: true, label: "epsilon"},
+//        Edge{head: states[1], tail: states[2], epsilon: true, label: "epsilon"},
+//        Edge{head: states[2], tail: states[3], epsilon: false, label: "a"},
+//        Edge{head: states[3], tail: states[6], epsilon: true, label: "epsilon"},
+//        Edge{head: states[1], tail: states[4], epsilon: true, label: "epsilon"},
+//        Edge{head: states[4], tail: states[5], epsilon: false, label: "b"},
+//        Edge{head: states[5], tail: states[6], epsilon: true, label: "epsilon"},
+//        Edge{head: states[6], tail: states[1], epsilon: true, label: "epsilon"},
+//        Edge{head: states[6], tail: states[7], epsilon: true, label: "epsilon"},
+//        Edge{head: states[7], tail: states[8], epsilon: false, label: "a"},
+//        Edge{head: states[8], tail: states[9], epsilon: false, label: "b"},
+//        Edge{head: states[9], tail: states[10], epsilon: false, label: "b"},
+//    ];
+//    let g = Graph::make(&states, &edges);
+//    let ret = g.epsilon_closure(&vec![Node{v:0}]);
+//    println!("{:#?}", ret);
+//    assert_eq!(ret.len(), 5);
+//}
 
 #[test]
 fn epsilon_nearest_closure_test() {
